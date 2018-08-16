@@ -8,7 +8,7 @@ class ClassicLeague(object):
     """
     A class representing a classic league in the Fantasy Premier League.
     """
-    def __init__(self, league_id):
+    def __init__(self, league_id,pages=None):
         self.id = league_id
         self._information = self._get_information()
         self._league = self._information["league"]
@@ -23,7 +23,7 @@ class ClassicLeague(object):
         #: The gameweek the league started in.
         self.started = self._league["start_event"]
 
-        self.standings = self._standings()
+        self.standings = self._standings(pages)
         """
         A list (of dictionaries) containing information about the league's
         standings.
@@ -39,19 +39,28 @@ class ClassicLeague(object):
         return requests.get("{}leagues-classic-standings/{}".format(
             API_BASE_URL, self.id)).json()
 
-    def _standings(self):
+    def _standings(self,pages):
         """Returns league standings for all teams."""
         standings = []
         # Iterate through all available pages
-        for page in itertools.count(start=1):
-            url = "{}leagues-classic-standings/{}?ls-page={}".format(
-                API_BASE_URL, self.id, page)
-            page_results = requests.get(url).json()['standings']['results']
-            # Check if page exists
-            if page_results:
+        if not pages:
+            for page in itertools.count(start=1):
+                url = "{}leagues-classic-standings/{}?ls-page={}".format(
+                    API_BASE_URL, self.id, page)
+                page_results = requests.get(url).json()['standings']['results']
+                # Check if page exists
+                if page_results:
+                    standings.extend(page_results)
+                else:
+                    return standings
+        else:
+            for page in range(1,pages+1):
+                url = "{}leagues-classic-standings/{}?ls-page={}".format(
+                    API_BASE_URL, self.id, page)
+                page_results = requests.get(url).json()['standings']['results']
                 standings.extend(page_results)
-            else:
-                return standings
+
+            return standings
 
     def __str__(self):
         return "{} - {}".format(self.name, self.id)
